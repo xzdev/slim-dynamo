@@ -2,7 +2,6 @@ import * as AWS from 'aws-sdk';
 import {
   ListTablesOutput,
   DocumentClient,
-  QueryInput,
   UpdateItemInput,
   Key,
   PutItemInputAttributeMap,
@@ -40,6 +39,8 @@ export type CallbackWithKey<T> = (
   callback?: T[],
   key?: Key
 ) => void;
+
+export type QueryInput = Partial<DocumentClient.QueryInput>;
 
 export const dbListTables = (callback: Callback<ListTablesOutput>) => {
   dynamodb.listTables(
@@ -80,7 +81,7 @@ export const dbQueryResultGSI = <T>(
   indexName: string,
   expression: QueryInput,
   tableName: string,
-  callback: Callback<T[]>
+  callback: CallbackWithKey<T>
 ) => {
   console.log('dbQueryResultGSI', expression, tableName);
   dbClient.query(
@@ -96,7 +97,7 @@ export const dbQueryResultGSI = <T>(
         callback(error);
       } else {
         console.log(`Return item matches to the ${indexName}`, getResult.Items);
-        callback(null, getResult.Items as T[]);
+        callback(null, getResult.Items as T[], getResult.LastEvaluatedKey);
       }
     }
   );
@@ -326,7 +327,7 @@ interface BatchUpdateItems {
   key: Key;
   update: UpdateItemInput;
 }
-
+dbQueryResultGSI;
 const dbBatchUpdateResult = (
   updates: BatchUpdateItems[],
   tableName: string,
