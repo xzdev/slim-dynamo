@@ -12,6 +12,7 @@ import {
   KeyList,
 } from 'aws-sdk/clients/dynamodb';
 import { isEmpty, isArray, forOwn } from 'lodash';
+import { request } from 'http';
 
 const dynamodbOfflineOptions = {
   region: 'localhost',
@@ -209,8 +210,8 @@ const dbDeleteResult = (
   );
 };
 
-export const batchWrite = (
-  request: BatchWriteItemInput,
+const batchWriteRecords = (
+  request: DocumentClient.BatchWriteItemInput,
   callback: Callback<boolean>
 ) => {
   console.log('batchWrite:', request);
@@ -232,7 +233,7 @@ export const batchWrite = (
         batchUpdateResult.UnprocessedItems
       );
       // recursively call the method until callback is called.
-      batchWrite(
+      batchWriteRecords(
         { RequestItems: batchUpdateResult.UnprocessedItems },
         callback
       );
@@ -241,6 +242,23 @@ export const batchWrite = (
       callback(error, true);
     }
   });
+};
+
+export const batchWrite = (
+  request: DocumentClient.WriteRequests,
+  tableName: string,
+  callback: Callback<boolean>
+) => {
+  console.log('batchWrite', request);
+  const table = `${dbPrefix}-${tableName}`;
+  batchWriteRecords(
+    {
+      RequestItems: {
+        [table]: request,
+      },
+    },
+    callback
+  );
 };
 
 const batchGetRecords = (
@@ -282,9 +300,10 @@ const batchGetRecords = (
 
 export const batchGet = (
   keys: DocumentClient.KeyList,
-  table: string,
+  tableName: string,
   callback: Callback<ItemList>
 ) => {
+  const table = `${dbPrefix}-${tableName}`;
   console.log('batchGetWithCallback', keys, table);
   batchGetRecords(
     {
