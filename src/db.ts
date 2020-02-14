@@ -12,7 +12,6 @@ import {
   KeyList,
 } from 'aws-sdk/clients/dynamodb';
 import { isEmpty, isArray, forOwn } from 'lodash';
-import { promisify } from './utils';
 
 const dynamodbOfflineOptions = {
   region: 'localhost',
@@ -210,11 +209,11 @@ const dbDeleteResult = (
   );
 };
 
-const batchWriteRecords = (
+export const batchWrite = (
   request: BatchWriteItemInput,
   callback: Callback<boolean>
 ) => {
-  console.log('batchWriteRecords:', request);
+  console.log('batchWrite:', request);
   dbClient.batchWrite(request, (error, batchUpdateResult) => {
     if (error) {
       callback(error, false);
@@ -233,7 +232,7 @@ const batchWriteRecords = (
         batchUpdateResult.UnprocessedItems
       );
       // recursively call the method until callback is called.
-      batchWriteRecords(
+      batchWrite(
         { RequestItems: batchUpdateResult.UnprocessedItems },
         callback
       );
@@ -241,15 +240,6 @@ const batchWriteRecords = (
       // no missing keys, then call the callback to end the recursion
       callback(error, true);
     }
-  });
-};
-
-export const batchWrite = async <T>(table: string, updates: T[]) => {
-  console.log('batchWrite', updates);
-  return promisify(batchWriteRecords)({
-    RequestItems: {
-      [table]: updates,
-    },
   });
 };
 
@@ -290,8 +280,8 @@ const batchGetRecords = (
   });
 };
 
-export const batchGetWithCallback = (
-  keys: KeyList,
+export const batchGet = (
+  keys: DocumentClient.KeyList,
   table: string,
   callback: Callback<ItemList>
 ) => {
@@ -307,41 +297,6 @@ export const batchGetWithCallback = (
     [],
     callback
   );
-};
-
-export const batchGet = async (table: string, keys: KeyList) => {
-  console.log('batchGet', keys, table);
-  return promisify<ItemList>(batchGetRecords)(
-    {
-      RequestItems: {
-        [table]: { Keys: keys },
-      },
-      ReturnConsumedCapacity: 'NONE',
-    },
-    table,
-    []
-  );
-};
-
-interface BatchUpdateItems {
-  key: Key;
-  update: UpdateItemInput;
-}
-dbQueryResultGSI;
-const dbBatchUpdateResult = (
-  updates: BatchUpdateItems[],
-  tableName: string,
-  callback: Callback<boolean>
-) => {
-  Promise.all(
-    updates.map(update =>
-      promisify(dbUpdateResult)(update.key, update.update, tableName)
-    )
-  )
-    .then(() => {
-      callback(null, true);
-    })
-    .catch(error => callback(error));
 };
 
 interface DBObject {
