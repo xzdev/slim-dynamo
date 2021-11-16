@@ -29,7 +29,7 @@
     "typescript": "~3.7.0"
   },
   "dependencies": {
-    "aws-sdk": "^2.606.0",
+    "aws-sdk": "^2.814.0",
     "lodash": "^4.17.15"
   }
 }
